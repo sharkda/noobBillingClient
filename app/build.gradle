@@ -50,7 +50,10 @@ dependencies {
     //MDC (material.io)
     api 'com.google.android.material:material:1.2.0'
 
+    //sharkda: omg, spent one day and turns out i need kapt for room..wtf
+    //https://developer.android.com/jetpack/androidx/releases/room
     implementation 'androidx.room:room-runtime:2.2.5'
+    kapt 'androidx.room:room-compiler:2.2.5'
 
     //billing 3.0.0
     implementation 'com.android.billingclient:billing:3.0.0'

@@ -8,9 +8,10 @@ import androidx.lifecycle.ViewModel
 import com.turtle8.noobbillingclient0.localdb.PaidOneTime
 import com.turtle8.noobbillingclient0.repositories.BillingRepository
 
-class OneViewModel(private val repository:BillingRepository) :ViewModel() {
+class OneViewModel(application:Application) :AndroidViewModel(application) {
 
     val paidLiveData: LiveData<PaidOneTime>
+    private val repository: BillingRepository
 
     companion object{
         const val LOG_TAG = "OneViewModel"
@@ -18,12 +19,14 @@ class OneViewModel(private val repository:BillingRepository) :ViewModel() {
 
     init{
         Log.d(LOG_TAG, "init")
+        repository = BillingRepository.getInstance(application)
+        repository.startDataSourceConnections()
         paidLiveData = repository.paidLiveData
     }
 
     override fun onCleared() {
         Log.d(LOG_TAG, "onCleared")
-        repository.endDataSourceConnections()
+        //repository.endDataSourceConnections()
         super.onCleared()
     }
 }

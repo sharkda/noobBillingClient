@@ -38,7 +38,7 @@ BillingClientStateListener{
         if (::localCacheBillingClient.isInitialized == false){
             localCacheBillingClient = LocalBillingDb.getInstance(application)
         }
-        localCacheBillingClient.entitilmentDao.getPaidPro()
+        localCacheBillingClient.entitlementsDao.getPaidOneTime()
     }
 
     override fun onBillingSetupFinished(billingResult: BillingResult) {
@@ -48,7 +48,10 @@ BillingClientStateListener{
     override fun onBillingServiceDisconnected() {
         Log.d(LOG_TAG, "onBillingServiceDisconnected")
     }
-
+    fun startDataSourceConnections(){
+        Log.d(LOG_TAG, "startDataSourceConnections")
+        localCacheBillingClient = LocalBillingDb.getInstance(application)
+    }
     fun endDataSourceConnections(){
         playStoreBillingClient.endConnection()
         Log.d(LOG_TAG, "endDataSourceConnections")

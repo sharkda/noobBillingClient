@@ -17,23 +17,24 @@ abstract class Entitlement{
     abstract fun mayPurchase(): Boolean
 }
 
-/**
- * Indicates whether the user owns a Paid Pro onetime.
- */
+
+///**
+// * Indicates whether the user owns a Paid Pro onetime.
+// */
 @Entity(tableName = "paid_one_time")
 data class PaidOneTime(val entitled: Boolean) : Entitlement() {
     override fun mayPurchase(): Boolean = !entitled
 }
 
-/**
- * Indicates whether the user owns a premium car,e= subscribed
- */
+///**
+// * Indicates whether the user owns a premium car,e= subscribed
+// */
 @Entity(tableName = "premium_subscription")
 data class PremiumSubscription(val entitled: Boolean) : Entitlement() {
     override fun mayPurchase(): Boolean = !entitled
 }
 
-/*for copper coins, consumable, please trivialKotlin on github to add it back.*/
+///*for copper coins, consumable, please trivialKotlin on github to add it back.*/
 @Entity(tableName = "coin_asset")
 class CoinAsset(private var coins: Int) : Entitlement() {
     /**

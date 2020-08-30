@@ -4,11 +4,11 @@ import androidx.lifecycle.LiveData
 import androidx.room.*
 
 /**
-* No update methods necessary since for each table there is ever expecting one row, hence why
-* the primary key is hardcoded.
-*/
+ * No update methods necessary since for each table there is ever expecting one row, hence why
+ * the primary key is hardcoded.
+ */
 @Dao
-interface EntitlementDao{
+interface EntitlementsDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insert(paidOneTime: PaidOneTime)
 
@@ -16,13 +16,14 @@ interface EntitlementDao{
     fun update(paidOneTime: PaidOneTime)
 
     @Query("SELECT * FROM paid_one_time LIMIT 1")
-    fun getPaidPro(): LiveData<PaidOneTime>
+    fun getPaidOneTime(): LiveData<PaidOneTime>
 
     @Delete
     fun delete(paidOneTime: PaidOneTime)
 
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun insert(premium:PremiumSubscription)
+    fun insert(premium: PremiumSubscription)
 
     @Update
     fun update(premium: PremiumSubscription)
@@ -34,7 +35,7 @@ interface EntitlementDao{
     fun delete(premium: PremiumSubscription)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun insert(coin: CoinAsset )
+    fun insert(coin: CoinAsset)
 
     @Update
     fun update(coin: CoinAsset)
