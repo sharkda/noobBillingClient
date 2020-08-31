@@ -7,6 +7,7 @@ import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.fragment.app.viewModels
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.snackbar.Snackbar
@@ -23,18 +24,20 @@ class OneFragment : Fragment() {
         fun newInstance() = OneFragment()
     }
 
-    private lateinit var viewModel: OneViewModel
+    //private lateinit var viewModel: OneViewModel
+    private val viewModel:OneViewModel by viewModels()
+
     private lateinit var binding:OneFragmentBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.d(LOG_TAG, "onCreate")
         val application = requireNotNull(this.activity).application
-        val viewModelFactory = OneViewModelFactory(
-            application
-        )
-        viewModel = ViewModelProvider(this, viewModelFactory)
-            .get(OneViewModel::class.java)
+//        val viewModelFactory = OneViewModelFactory(
+//            application
+//        )
+//        viewModel = ViewModelProvider(this, viewModelFactory)
+//            .get(OneViewModel::class.java)
     }
 
     override fun onCreateView(
@@ -47,11 +50,19 @@ class OneFragment : Fragment() {
             if (it == null){
                 Snackbar.make(requireView(), "observe:paidLiveData null",
                     Snackbar.LENGTH_SHORT).show()
+                binding.oneFragmentText.text = "null"
             }else{
                 Snackbar.make(requireView(), "observe:paidLiveData ${it.entitled.toString()}",
                     Snackbar.LENGTH_SHORT).show()
+                binding.oneFragmentText.text = "paid"
             }
         })
+        binding.inertPotButton.setOnClickListener{
+            viewModel.devInsertPaidOneTime()
+        }
+        binding.deletePotButton.setOnClickListener{
+            viewModel.devDeletePaidOneTime()
+        }
         return binding.root
         //return inflater.inflate(R.layout.one_fragment, container, false)
     }

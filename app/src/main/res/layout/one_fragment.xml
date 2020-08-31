@@ -1,16 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@android:color/holo_blue_light"
+    android:orientation="vertical"
     tools:context=".fragements.OneFragment">
 
     <TextView
+        android:id="@+id/one_fragment_text"
         android:gravity="center"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="wrap_content"
         android:textSize="50sp"
         android:text="One Fragment" />
-
-</FrameLayout>
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/inert_pot_button"
+        android:gravity="center"
+        android:layout_width="match_parent"
+        android:layout_height="100sp"
+        android:textSize="33sp"
+        android:text="insert pot"/>
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/delete_pot_button"
+        android:gravity="center"
+        android:layout_width="match_parent"
+        android:layout_height="100sp"
+        android:textSize="33sp"
+        android:text="delete pot"/>
+</LinearLayout>

@@ -5,8 +5,11 @@ import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.turtle8.noobbillingclient0.localdb.PaidOneTime
 import com.turtle8.noobbillingclient0.repositories.BillingRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class OneViewModel(application:Application) :AndroidViewModel(application) {
 
@@ -15,6 +18,17 @@ class OneViewModel(application:Application) :AndroidViewModel(application) {
 
     companion object{
         const val LOG_TAG = "OneViewModel"
+    }
+
+    fun devInsertPaidOneTime(){
+        viewModelScope.launch() { repository.devInsertPaidOneTime() }
+
+    }
+    fun devDeletePaidOneTime(){
+        viewModelScope.launch() {
+            repository.devDelPaidOneTime()
+        }
+
     }
 
     init{

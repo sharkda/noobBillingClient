@@ -9,6 +9,8 @@ import com.android.billingclient.api.BillingClientStateListener
 import com.android.billingclient.api.BillingResult
 import com.turtle8.noobbillingclient0.localdb.LocalBillingDb
 import com.turtle8.noobbillingclient0.localdb.PaidOneTime
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class BillingRepository private constructor(
     private val application: Application):
@@ -55,6 +57,17 @@ BillingClientStateListener{
     fun endDataSourceConnections(){
         playStoreBillingClient.endConnection()
         Log.d(LOG_TAG, "endDataSourceConnections")
+    }
+
+    suspend fun devInsertPaidOneTime(){
+        withContext(Dispatchers.IO){
+            localCacheBillingClient.entitlementsDao.insert(PaidOneTime(true))
+        }
+    }
+    suspend fun devDelPaidOneTime(){
+        withContext(Dispatchers.IO){
+            localCacheBillingClient.entitlementsDao.delete(PaidOneTime(true))
+        }
     }
     companion object{
         private const val LOG_TAG = "BillingRepository"
