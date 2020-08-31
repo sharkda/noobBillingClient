@@ -7,9 +7,10 @@
     tools:context=".MainActivity">
 
     <fragment
-        android:id="@+id/one_fragment"
-        android:name="com.turtle8.noobbillingclient0.fragements.OneFragment"
-        tools:layout="@layout/one_fragment"
+        android:id="@+id/fragment"
+        android:name="androidx.navigation.fragment.NavHostFragment"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent"
+        app:defaultNavHost="true"
+        app:navGraph="@navigation/navigation" />
 </androidx.constraintlayout.widget.ConstraintLayout>

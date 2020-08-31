@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/navigation"
+    app:startDestination="@id/portalFragment">
+    <fragment
+        android:id="@+id/portalFragment"
+        android:name="com.turtle8.noobbillingclient0.fragements.portalFragment"
+        android:label="fragment_portal"
+        tools:layout="@layout/fragment_portal">
+        <action
+            android:id="@+id/action_portalFragment_to_oneFragment"
+            app:destination="@id/oneFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/oneFragment"
+        android:name="com.turtle8.noobbillingclient0.fragements.OneFragment"
+        android:label="one_fragment"
+        tools:layout="@layout/one_fragment" />
+</navigation>
