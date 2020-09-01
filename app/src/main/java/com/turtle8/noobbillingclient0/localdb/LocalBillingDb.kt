@@ -4,14 +4,20 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.TypeConverters
 
 @Database(entities = [
+    AugmentedSkuDetails::class,
     PaidOneTime::class,
     PremiumSubscription::class,
-    CoinAsset::class
-], version = 1_1  , exportSchema = false)
+    CoinAsset::class,
+    CachedPurchase::class
+], version = 1_4  , exportSchema = false)
+@TypeConverters(PurchaseTypeConverter::class)
 abstract class LocalBillingDb:RoomDatabase(){
     abstract val entitlementsDao:EntitlementsDao
+    abstract val skuDetailsDao:AugmentedSkuDetailsDao
+    abstract val purchaseDao:PurchaseDao
     companion object{
         @Volatile
         private var INSTANCE: LocalBillingDb? = null
