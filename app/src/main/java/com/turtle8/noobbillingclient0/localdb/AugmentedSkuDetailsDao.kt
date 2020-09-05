@@ -41,4 +41,7 @@ interface AugmentedSkuDetailsDao {
 
     @Query("UPDATE AugmentedSkuDetails SET canPurchase = :canPurchase WHERE sku = :sku")
     fun update(sku: String, canPurchase: Boolean)
+
+    @Query("DELETE from augmentedSkuDetails where sku = :sku")
+    fun delete(sku:String)
 }

@@ -12,10 +12,18 @@
         <action
             android:id="@+id/action_portalFragment_to_oneFragment"
             app:destination="@id/oneFragment" />
+        <action
+            android:id="@+id/action_portalFragment_to_purchaseFragment"
+            app:destination="@id/purchaseFragment" />
     </fragment>
     <fragment
         android:id="@+id/oneFragment"
         android:name="com.turtle8.noobbillingclient0.fragements.OneFragment"
         android:label="one_fragment"
         tools:layout="@layout/one_fragment" />
+    <fragment
+        android:id="@+id/purchaseFragment"
+        android:name="com.turtle8.noobbillingclient0.fragements.PurchaseFragment"
+        android:label="purchase_fragment"
+        tools:layout="@layout/purchase_fragment" />
 </navigation>

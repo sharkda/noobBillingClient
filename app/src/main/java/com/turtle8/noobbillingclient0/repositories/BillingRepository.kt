@@ -2,18 +2,23 @@ package com.turtle8.noobbillingclient0.repositories
 
 import android.app.Activity
 import android.app.Application
+import android.content.Context
 import android.util.Log
 import androidx.annotation.WorkerThread
 import androidx.lifecycle.LiveData
 import com.android.billingclient.api.*
 import com.turtle8.noobbillingclient0.localdb.*
+import com.turtle8.noobbillingclient0.repositories.BillingRepository.RetryPolicies.taskExecutionRetryPolicy
+import com.turtle8.noobbillingclient0.repositories.BillingRepository.Throttle.isLastInvocationTimeStale
 import kotlinx.coroutines.*
-import java.util.HashSet
+import java.util.*
+import java.util.concurrent.atomic.AtomicInteger
+import kotlin.math.pow
 
 class BillingRepository private constructor(
     private val application: Application
 ) :
-    BillingClientStateListener, PurchasesUpdatedListener {
+    BillingClientStateListener, PurchasesUpdatedListener, ConsumeResponseListener {
 
     /**
      * The [BillingClient] is the most reliable and primary source of truth for all purchases
@@ -194,12 +199,13 @@ class BillingRepository private constructor(
     private fun processPurchases(purchasesResult: Set<Purchase>) =
         CoroutineScope(Job() + Dispatchers.IO).launch {
             Log.d(LOG_TAG, "processPurchases called")
-            val validPurchases = HashSet<Purchase>(purchasesResult.size)
-            Log.d(LOG_TAG, "processPurchases newBatch content $purchasesResult")
+            val cachedPurchases = localCacheBillingClient.purchaseDao.getPurchases()
+            val newBatch = HashSet<Purchase>(purchasesResult.size)
             purchasesResult.forEach { purchase ->
-                if (purchase.purchaseState == Purchase.PurchaseState.PURCHASED) {
+                if (purchase.purchaseState == Purchase.PurchaseState.PURCHASED
+                    && !cachedPurchases.any { it.data == purchase }) {
                     if (isSignatureValid(purchase)) {
-                        validPurchases.add(purchase)
+                        newBatch.add(purchase)
                     }
                 } else if (purchase.purchaseState == Purchase.PurchaseState.PENDING) {
                     Log.d(LOG_TAG, "Received a pending purchase of SKU: ${purchase.sku}")
@@ -207,25 +213,91 @@ class BillingRepository private constructor(
                     // purchases, prompt them to complete it, etc.
                 }
             }
-            val (consumables, nonConsumables) = validPurchases.partition {
-                AppSku.Consumable_Skus.contains(it.sku)
+            if (newBatch.isNotEmpty()) {
+                sendPurchasesToServer(newBatch)
+                // We still care about purchasesResult in case a old purchase has not yet been consumed.
+                saveToLocalDatabase(newBatch, purchasesResult)
+                //consumeAsync(purchasesResult): do this inside saveToLocalDatabase to avoid race condition
+            } else if (isLastInvocationTimeStale(application)) {
+                handleConsumablePurchasesAsync(purchasesResult)
+                //queryPurchasesFromSecureServer()
             }
-            Log.d(LOG_TAG, "processPurchases consumables content $consumables")
-            Log.d(LOG_TAG, "processPurchases non-consumables content $nonConsumables")
-            /*
-              As is being done in this sample, for extra reliability you may store the
-              receipts/purchases to a your own remote/local database for until after you
-              disburse entitlements. That way if the Google Play Billing library fails at any
-              given point, you can independently verify whether entitlements were accurately
-              disbursed. In this sample, the receipts are then removed upon entitlement
-              disbursement.
-             */
-            val testing = localCacheBillingClient.purchaseDao.getPurchases()
-            Log.d(LOG_TAG, "processPurchases purchases in the lcl db ${testing?.size}")
-            localCacheBillingClient.purchaseDao.insert(*validPurchases.toTypedArray())
-            handleConsumablePurchasesAsync(consumables)
-            acknowledgeNonConsumablePurchasesAsync(nonConsumables)
+            //below seems wrongly input here... more like testing of
+            //consuming the cons.
+//            val (consumables, nonConsumables) = newBatch.partition {
+//                AppSku.Consumable_Skus.contains(it.sku)
+//            }
+//            Log.d(LOG_TAG, "processPurchases consumables content $consumables")
+//            Log.d(LOG_TAG, "processPurchases non-consumables content $nonConsumables")
+//            /*
+//              As is being done in this sample, for extra reliability you may store the
+//              receipts/purchases to a your own remote/local database for until after you
+//              disburse entitlements. That way if the Google Play Billing library fails at any
+//              given point, you can independently verify whether entitlements were accurately
+//              disbursed. In this sample, the receipts are then removed upon entitlement
+//              disbursement.
+//             */
+//            val testing = localCacheBillingClient.purchaseDao.getPurchases()
+//            Log.d(LOG_TAG, "processPurchases purchases in the lcl db ${testing?.size}")
+//            localCacheBillingClient.purchaseDao.insert(*newBatch.toTypedArray())
+//            handleConsumablePurchasesAsync(consumables)
+//            acknowledgeNonConsumablePurchasesAsync(nonConsumables)
         }
+
+
+    private fun saveToLocalDatabase(newBatch: Set<Purchase>, allPurchases: Set<Purchase>) {
+        val scope = CoroutineScope(Job() + Dispatchers.IO)
+        scope.launch {
+            newBatch.forEach { purchase ->
+                when (purchase.sku) {
+                    AppSku.ONE_TIME -> {
+                        val oneTime = PaidOneTime(true)
+                        insert(oneTime)
+                        localCacheBillingClient.skuDetailsDao.insertOrUpdate(purchase.sku, oneTime.mayPurchase())
+                    }
+                    AppSku.SUB_MONTHLY-> {
+                        val sub = PremiumSubscription(true)
+                        insert(sub)
+                        localCacheBillingClient.skuDetailsDao.insertOrUpdate(purchase.sku, sub.mayPurchase())
+                        AppSku.Subs_Skus.forEach { otherSku ->
+                            if (otherSku != purchase.sku) {
+                                localCacheBillingClient.skuDetailsDao.insertOrUpdate(otherSku, !sub.mayPurchase())
+                            }
+                        }
+                    }
+                }
+            }
+            localCacheBillingClient.purchaseDao.insert(*newBatch.toTypedArray())
+            handleConsumablePurchasesAsync(allPurchases)
+        }
+    }
+
+    private fun saveToLocalDatabase(purchaseToken: String) {
+        val scope = CoroutineScope(Job() + Dispatchers.IO)
+        scope.launch {
+            val cachedPurchases = localCacheBillingClient.purchaseDao.getPurchases()
+            val match = cachedPurchases.find { it.purchaseToken == purchaseToken }
+            if (match?.sku == AppSku.COIN) {
+                //pdateGasTank(GasTank(GAS_PURCHASE))
+                localCacheBillingClient.purchaseDao.delete(match)
+            }
+        }
+    }
+
+    private fun handleConsumablePurchasesAsync(purchases: Set<Purchase>) {
+        purchases.forEach {
+            if (AppSku.Consumable_Skus.contains(it.sku)) {
+                //TODO:unmark below and implement it.
+                //playStoreBillingClient.consumeAsync(it., this@BillingRepository)
+                //tell your server:
+                Log.i(LOG_TAG, "handleConsumablePurchasesAsync: asked Play Billing to consume sku = ${it.sku}")
+            }
+        }
+    }
+
+    private fun sendPurchasesToServer(purchases: Set<Purchase>) {
+        //not implemented here
+    }
 
     /**
      * If you do not acknowledge a purchase, the Google Play Store will provide a refund to the
@@ -404,14 +476,109 @@ class BillingRepository private constructor(
     suspend fun devInsertPaidOneTime() {
         withContext(Dispatchers.IO) {
             localCacheBillingClient.entitlementsDao.insert(PaidOneTime(true))
+            val pot = PaidOneTime(true)
+            localCacheBillingClient.skuDetailsDao
+                .insertOrUpdate(AppSku.ONE_TIME, pot.mayPurchase())
         }
     }
 
     suspend fun devDelPaidOneTime() {
         withContext(Dispatchers.IO) {
             localCacheBillingClient.entitlementsDao.delete(PaidOneTime(true))
+            localCacheBillingClient.skuDetailsDao.delete(AppSku.ONE_TIME)
         }
     }
+
+    suspend fun devAddCoins(count:Int){
+        withContext(Dispatchers.IO) {
+            localCacheBillingClient.entitlementsDao.insert(CoinAsset(count))
+            localCacheBillingClient.skuDetailsDao
+                .insertOrUpdate(AppSku.COIN, CoinAsset(count).mayPurchase())
+        }
+    }
+
+
+    fun launchBillingFlow(activity: Activity, augmentedSkuDetails: AugmentedSkuDetails) =
+        launchBillingFlow(activity, SkuDetails(augmentedSkuDetails.originJson!!))
+
+    fun launchBillingFlow(activity: Activity, skuDetails: SkuDetails) {
+        //val oldSku: String? = getOldSku(skuDetails.sku)
+        val purchaseParams = BillingFlowParams.newBuilder().setSkuDetails(skuDetails)
+            .build()
+            //.setOldSku(oldSku).build()
+
+        taskExecutionRetryPolicy(playStoreBillingClient, this) {
+            playStoreBillingClient.launchBillingFlow(activity, purchaseParams)
+        }
+    }
+
+    /**
+     * This private object class shows an example retry policies. You may choose to replace it with
+     * your own policies.
+     */
+    private object RetryPolicies {
+        private val maxRetry = 5
+        private var retryCounter = AtomicInteger(1)
+        private val baseDelayMillis = 500
+        private val taskDelay = 2000L
+
+        fun resetConnectionRetryPolicyCounter() {
+            retryCounter.set(1)
+        }
+
+        /**
+         * This works because it actually only makes one call. Then it waits for success or failure.
+         * onSuccess it makes no more calls and resets the retryCounter to 1. onFailure another
+         * call is made, until too many failures cause retryCounter to reach maxRetry and the
+         * policy stops trying. This is a safe algorithm: the initial calls to
+         * connectToPlayBillingService from instantiateAndConnectToPlayBillingService is always
+         * independent of the RetryPolicies. And so the Retry Policy exists only to help and never
+         * to hurt.
+         */
+        fun connectionRetryPolicy(block: () -> Unit) {
+            Log.d(LOG_TAG, "connectionRetryPolicy")
+            val scope = CoroutineScope(Job() + Dispatchers.Main)
+            scope.launch {
+                val counter = retryCounter.getAndIncrement()
+                if (counter < maxRetry) {
+                    val waitTime: Long = (2f.pow(counter) * baseDelayMillis).toLong()
+                    delay(waitTime)
+                    block()
+                }
+            }
+
+        }
+
+        /**
+         * All this is doing is check that billingClient is connected and if it's not, request
+         * connection, wait x number of seconds and then proceed with the actual task.
+         */
+        fun taskExecutionRetryPolicy(billingClient: BillingClient, listener: BillingRepository, task: () -> Unit) {
+            val scope = CoroutineScope(Job() + Dispatchers.Main)
+            scope.launch {
+                if (!billingClient.isReady) {
+                    Log.d(LOG_TAG, "taskExecutionRetryPolicy billing not ready")
+                    billingClient.startConnection(listener)
+                    delay(taskDelay)
+                }
+                task()
+            }
+        }
+    }
+    //this fun is for SubScription 1 -> 2
+//    private fun getOldSku(sku: String?): String? {
+//        var result: String? = null
+//        if (AppSku.Subs_Skus.contains(sku)) {
+//            premiumStatusLiveData.value?.apply {
+//                result = when (sku) {
+//                    AppSku.SUB_MONTHLY -> AppSku.GOLD_YEARLY
+//                    else -> AppSku.SUB_MONTHLY
+//                }
+//            }
+//        }
+//        return result
+//    }
+
 
     companion object {
         private const val LOG_TAG = "BillingRepository"
@@ -433,6 +600,74 @@ class BillingRepository private constructor(
         val Subs_Skus = listOf(SUB_MONTHLY)
         val Consumable_Skus = listOf(COIN)
         val Premium_Status_Skus = Subs_Skus //coincidence.
+    }
+    /**
+     * This is the throttling valve. It is used to modulate how often calls are made to the
+     * secure server in order to save money.
+     */
+    private object Throttle {
+        private val DEAD_BAND = 7200000//2*60*60*1000: two hours wait
+        private val PREFS_NAME = "BillingRepository.Throttle"
+        private val KEY = "lastInvocationTime"
+
+        fun isLastInvocationTimeStale(context: Context): Boolean {
+            val sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val lastInvocationTime = sharedPrefs.getLong(KEY, 0)
+            return lastInvocationTime + DEAD_BAND < Date().time
+        }
+
+        fun refreshLastInvocationTime(context: Context) {
+            val sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            with(sharedPrefs.edit()) {
+                putLong(KEY, Date().time)
+                apply()
+            }
+        }
+    }
+
+    override fun onConsumeResponse(billingResult: BillingResult, purchaseToken: String) {
+        Log.d(LOG_TAG, "onConsumeResponse")
+        when (billingResult.responseCode) {
+            BillingClient.BillingResponseCode.OK -> {
+                //give user the items s/he just bought by updating the appropriate tables/databases
+                purchaseToken?.apply { saveToLocalDatabase(this) }
+                //secureServerBillingClient.onComsumeResponse(purchaseToken, responseCode)
+            }
+            else -> {
+                Log.w(LOG_TAG, "Error consuming purchase with token ($purchaseToken). " +
+                        "Response code: ${billingResult.responseCode}")
+            }
+        }
+
+    }
+
+    /**
+     * The gas level can be updated from the client when the user drives or from a data source
+     * (e.g. Play BillingClient) when the user buys more gas. Hence this repo must watch against
+     * race conditions and interleaves. sharkda: codes below might be problematic...
+     */
+    @WorkerThread
+    suspend fun updateCoinAsset(coin: CoinAsset) = withContext(Dispatchers.IO) {
+        Log.d(LOG_TAG, "updateGasTank")
+        var update: CoinAsset = coin
+        coinLiveData.value?.apply {
+            synchronized(this) {
+                if (this != coin) {//new purchase
+                    update = CoinAsset(getCoins() + coin.getCoins())
+                }
+                Log.d(
+                    LOG_TAG,
+                    "New coin asset is ${coin.getCoins()}; existing level is ${getCoins()}; so the final result is ${update.getCoins()}"
+                )
+                localCacheBillingClient.entitlementsDao.update(update)
+            }
+        }
+        if (coinLiveData.value == null) {
+            localCacheBillingClient.entitlementsDao.insert(update)
+            Log.d(LOG_TAG, "No we just added from null gas with level: ${coin.getCoins()}")
+        }
+        localCacheBillingClient.skuDetailsDao.insertOrUpdate(AppSku.COIN, update.mayPurchase())
+        Log.d(LOG_TAG, "updated AugmentedSkuDetails as well")
     }
 
 }

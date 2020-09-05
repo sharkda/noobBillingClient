@@ -31,6 +31,18 @@ class OneViewModel(application:Application) :AndroidViewModel(application) {
 
     }
 
+    //todo:this is how to consume the coins
+//    fun decrementAndSaveGas() {
+//        val gas = coinConsumableLiveData.value
+//        gas?.apply {
+//            decrement()
+//            viewModelScope.launch {
+//                repository.updateCoinAsset(this@apply)
+//            }
+//        }
+//    }
+
+
     init{
         Log.d(LOG_TAG, "init")
         repository = BillingRepository.getInstance(application)

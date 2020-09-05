@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/cardview_light_background"
+    android:orientation="vertical"
+    tools:context=".fragements.PurchaseFragment">
+
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/purchase_one_time_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="45sp"
+        android:textColor="@color/colorPrimary"
+        android:text="one time" />
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/one_time_insert_button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="One Time insert"
+        android:textSize="40sp"
+        />
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/one_time_del_button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="One Time del"
+        android:textSize="40sp"
+        />
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/purchase_coins_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="45sp"
+        android:textColor="@color/colorPrimary"
+        android:text="coins" />
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/coins_add_button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="coin add"
+        android:textSize="40sp"
+        />
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/coin_consume_button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="coin consume"
+        android:textSize="40sp"
+        />
+</LinearLayout>

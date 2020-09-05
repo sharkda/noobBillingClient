@@ -19,10 +19,17 @@
         android:textColor="@color/colorPrimary"
         android:text="@string/hello_blank_fragment" />
     <com.google.android.material.button.MaterialButton
-        android:id="@+id/portal_button"
+        android:id="@+id/nav_to_purchase_button"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="portal_button"
+        android:text="to Purchase"
+        android:textSize="40sp"
+        />
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/nav_to_one_button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="to One"
         android:textSize="40sp"
         />
 </LinearLayout>

@@ -41,9 +41,17 @@ class portalFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View? {
         binding = FragmentPortalBinding.inflate(inflater)
-        binding.portalButton.setOnClickListener{
+        binding.navToOneButton.setOnClickListener{
             try{
                 this.findNavController().navigate(R.id.action_portalFragment_to_oneFragment)
+            }catch(e: Exception){
+                Log.e(LOG_TAG, e.toString())
+            }
+
+        }
+        binding.navToPurchaseButton.setOnClickListener{
+            try{
+                this.findNavController().navigate(R.id.action_portalFragment_to_purchaseFragment)
             }catch(e: Exception){
                 Log.e(LOG_TAG, e.toString())
             }
